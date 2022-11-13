@@ -7,11 +7,10 @@ url = "https://pypi.org/simple"
 pylint = "*"
 
 [packages]
-wand = "*"
 requests = "*"
-"bs4" = "*"
-"boto3" = "*"
-slackclient = "*"
+boto3 = "*"
+openai = "*"
+imgurpython = "*"
 
 [requires]
-python_version = "3.6"
+python_version = "3.9"
