@@ -1,2 +1,4 @@
-build
-dalle.zip
+dalle_bot/build
+dalle_bot/dalle.zip
+dalle_dispatch/build
+dalle_dispatch/dalle_dispatch.zip
