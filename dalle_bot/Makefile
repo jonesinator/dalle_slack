@@ -1,3 +1,5 @@
+.PHONY: check
+
 dalle.zip: dalle.py Pipfile.lock
 	pylint dalle.py
 	rm -rf build
@@ -17,3 +19,7 @@ dalle_dispatch.zip: dalle_dispatch.py Pipfile_dispatch.lock
 	rm -rf build_dispatch/boto*
 	cd build_dispatch && zip -r ../dalle_dispatch.zip .
 	rm -rf build_dispatch
+
+check:
+	pylint *.py
+	pytest
