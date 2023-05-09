@@ -4,13 +4,16 @@ application or as an AWS Lambda pair."""
 import json
 import os
 import random
+import string
 import sys
 import traceback
 import typing
+import shutil
 
+import boto3
 import openai
 import requests
-from imgurpython import ImgurClient
+from PIL import Image
 
 
 def generate_image(prompt):
@@ -97,14 +100,28 @@ def sanitize_prompt(prompt: str, user: str) -> str:
     return random.choice(manips).alter(prompt)
 
 
-def upload_to_imgur(url):
-    """Upload image to imgur"""
-    client_id = os.environ['IMGUR_CLIENT_ID']
-    client_secret = os.environ['IMGUR_CLIENT_SECRET']
-    client = ImgurClient(client_id, client_secret)
-    upload_result = client.upload_from_url(url, anon=True)
-    upload_url = upload_result['link']
-    return upload_url
+def upload_to_s3(prompt, url):
+    """Upload image to s3"""
+    raw_local_file = '/tmp/local_raw.jpeg'
+    comp_local_file = '/tmp/local_compresses.jpeg'
+    s3_client = boto3.client('s3')
+    image_response = requests.get(url, stream=True, timeout=10000).raw
+    with open(raw_local_file,'wb') as file:
+        shutil.copyfileobj(image_response, file)
+
+    image = Image.open(raw_local_file)
+
+    image.save(comp_local_file,
+                 "JPEG",
+                 optimize = True,
+                 quality = 50)
+
+    rand_tag = ''.join(random.choices(string.ascii_uppercase +
+                             string.digits, k=10))
+    final_file = f'{prompt.replace(" ", "_")}_{rand_tag}.jpeg'
+    s3_client.upload_file(comp_local_file, 'dallepics', final_file)
+    uploaded_url = f'https://d2jagmvo7k5q5j.cloudfront.net/{final_file}'
+    return uploaded_url
 
 
 def dalle(event, _):
@@ -140,7 +157,7 @@ def dalle(event, _):
 
         print('UPLOADING TO IMGUR')
 
-        uploaded = upload_to_imgur(image)
+        uploaded = upload_to_s3(sanitized_prompt, image)
 
         print('UPLOAD URL ' + uploaded)
 
@@ -162,14 +179,9 @@ def dalle(event, _):
 def main():
     """Process the command given on the command line."""
     prompt = ' '.join(sys.argv[1:])
-    # validation = validate_prompt(prompt)
-    # print(validation)
-    # if validation['flagged']:
-    #     print('VALIDATION FAILED')
-    #     return
     image = generate_image(prompt)
     print(image)
-    uploaded = upload_to_imgur(image)
+    uploaded = upload_to_s3(prompt, image)
     print(uploaded)
 
 if __name__ == '__main__':

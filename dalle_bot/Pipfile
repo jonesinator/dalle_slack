@@ -12,6 +12,7 @@ requests = "*"
 boto3 = "*"
 openai = "*"
 imgurpython = "*"
+pillow = "*"
 
 [requires]
 python_version = "3.9"
