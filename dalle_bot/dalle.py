@@ -9,6 +9,7 @@ import sys
 import traceback
 import typing
 import shutil
+import urllib.parse
 
 import boto3
 import openai
@@ -119,8 +120,10 @@ def upload_to_s3(prompt, url):
     rand_tag = ''.join(random.choices(string.ascii_uppercase +
                              string.digits, k=10))
     final_file = f'{prompt.replace(" ", "_")}_{rand_tag}.jpeg'
-    s3_client.upload_file(comp_local_file, 'dallepics', final_file)
-    uploaded_url = f'https://d2jagmvo7k5q5j.cloudfront.net/{final_file}'
+    encoded = urllib.parse.quote(final_file)
+    print(f'Final file {final_file}, Encoded url: {encoded}')
+    s3_client.upload_file(comp_local_file, 'dallepics', f'dalle/{final_file}')
+    uploaded_url = f'https://d2jagmvo7k5q5j.cloudfront.net/dalle/{encoded}'
     return uploaded_url
 
 
