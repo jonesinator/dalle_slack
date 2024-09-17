@@ -1,6 +1,7 @@
 """Generate Dalle images for slack. Designed to run as either a command-line
 application or as an AWS Lambda pair."""
 
+import argparse
 import json
 import os
 import random
@@ -21,8 +22,8 @@ def generate_image(prompt):
     """Generate the dalle image"""
     openai.organization = os.environ['OPENAI_ORGANIZATION']
     openai.api_key = os.environ['OPENAI_API_KEY']
-    response = openai.Image.create(prompt=prompt, n=1, size="1024x1024")
-    image_url = response['data'][0]['url']
+    response = openai.images.generate(prompt=prompt, n=1, size="1024x1024", model="dall-e-3")
+    image_url = response.data[0].url
     return image_url
 
 
@@ -126,6 +127,31 @@ def upload_to_s3(prompt, url):
     uploaded_url = f'https://d2jagmvo7k5q5j.cloudfront.net/dalle/{encoded}'
     return uploaded_url
 
+def parse_args(input_str):
+    """Parse any flags and directives
+
+    Returns
+    -------
+    The prompt to generate and the text to display.
+    """
+    opts = input_str.split(" ")
+    parser = argparse.ArgumentParser(description="Generate chatgpt text")
+    parser.add_argument("prompt", nargs="+", help="The text of the prompt")
+
+    args = parser.parse_args(opts)
+    text = " ".join(args.prompt)
+
+    split_text = text.split("[")
+    display_text = split_text[0].strip()
+    if len(split_text) > 1:
+        right_split = split_text[1].split("]")
+        if len(right_split) > 1:
+            display_text += right_split[1]
+
+    prompt_text = text.replace("[", "").replace("]", "")
+
+    return (display_text, prompt_text)
+
 
 def dalle(event, _):
     """Entry point for the lambda that actually generates the image."""
@@ -136,9 +162,10 @@ def dalle(event, _):
         print(f"SNS MESSAGE: {event['Records'][0]['Sns']['Message']}")
         message = json.loads(event['Records'][0]['Sns']['Message'])
         response_url = message['response_url']
-        prompt = message['prompt']
+        input_str = message['prompt']
         user = message['user']
 
+        (display, prompt) = parse_args(input_str)
         sanitized_prompt = sanitize_prompt(prompt, user)
 
         # Don't actually validate the prompt because it gives different results than when dalle
@@ -168,7 +195,7 @@ def dalle(event, _):
                       data=json.dumps({"response_type": "in_channel", "attachments": [
             {
                 "fallback": prompt,
-                "text": f'{user} generated: "{prompt}"',
+                "text": f'{user} generated: "{display}"',
                 "image_url": uploaded,
             }
             ]}), timeout=10000)
