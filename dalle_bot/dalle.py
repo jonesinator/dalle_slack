@@ -22,7 +22,7 @@ def generate_image(prompt):
     """Generate the dalle image"""
     openai.organization = os.environ['OPENAI_ORGANIZATION']
     openai.api_key = os.environ['OPENAI_API_KEY']
-    response = openai.images.generate(prompt=prompt, n=1, size="1024x1024", model="dall-e-3")
+    response = openai.images.generate(prompt=prompt, n=1, size="1024x1024", model="dall-e-3", quality="hd")
     image_url = response.data[0].url
     return image_url
 
